@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitmap Index Scan Animation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .animation-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-info {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .table-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .data-table, .index-table {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .table-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .table-row {
+            display: flex;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .table-header {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+
+        .table-cell {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border-right: 1px solid #ecf0f1;
+        }
+
+        .table-cell:last-child {
+            border-right: none;
+        }
+
+        .highlighted {
+            background: #fff3cd !important;
+            border: 2px solid #ffc107;
+            transform: scale(1.02);
+        }
+
+        .bitmap-section {
+            margin: 30px 0;
+        }
+
+        .bitmap-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .bitmap {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-width: 200px;
+        }
+
+        .bitmap-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #2c3e50;
+        }
+
+        .bitmap-bits {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .bit {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .bit-1 {
+            background: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }
+
+        .bit-0 {
+            background: #ecf0f1;
+            color: #7f8c8d;
+        }
+
+        .operation-section {
+            background: #e8f4f8;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .operation-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .heap-scan {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .result-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .result-row {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #155724;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .animated {
+            animation: pulse 1s ease-in-out;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            .table-section {
+                flex-direction: column;
+            }
+            
+            .bitmap-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bitmap Index Scan Animation</h1>
+        
+        <div class="controls">
+            <button onclick="startAnimation()">Start Animation</button>
+            <button onclick="resetAnimation()">Reset</button>
+            <button onclick="nextStep()" id="nextBtn" disabled>Next Step</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="step-info" id="stepInfo">
+                Click "Start Animation" to begin the Bitmap Index Scan demonstration
+            </div>
+
+            <div class="table-section">
+                <div class="data-table">
+                    <div class="table-title">Employee Table (Heap)</div>
+                    <div class="table-row table-header">
+                        <div class="table-cell">Row ID</div>
+                        <div class="table-cell">Name</div>
+                        <div class="table-cell">Age</div>
+                        <div class="table-cell">Dept</div>
+                        <div class="table-cell">Salary</div>
+                    </div>
+                    <div class="table-row" data-row="0">
+                        <div class="table-cell">0</div>
+                        <div class="table-cell">Alice</div>
+                        <div class="table-cell">28</div>
+                        <div class="table-cell">IT</div>
+                        <div class="table-cell">75000</div>
+                    </div>
+                    <div class="table-row" data-row="1">
+                        <div class="table-cell">1</div>
+                        <div class="table-cell">Bob</div>
+                        <div class="table-cell">32</div>
+                        <div class="table-cell">HR</div>
+                        <div class="table-cell">65000</div>
+                    </div>
+                    <div class="table-row" data-row="2">
+                        <div class="table-cell">2</div>
+                        <div class="table-cell">Carol</div>
+                        <div class="table-cell">29</div>
+                        <div class="table-cell">IT</div>
+                        <div class="table-cell">80000</div>
+                    </div>
+                    <div class="table-row" data-row="3">
+                        <div class="table-cell">3</div>
+                        <div class="table-cell">David</div>
+                        <div class="table-cell">35</div>
+                        <div class="table-cell">Finance</div>
+                        <div class="table-cell">70000</div>
+                    </div>
+                    <div class="table-row" data-row="4">
+                        <div class="table-cell">4</div>
+                        <div class="table-cell">Eve</div>
+                        <div class="table-cell">26</div>
+                        <div class="table-cell">IT</div>
+                        <div class="table-cell">72000</div>
+                    </div>
+                </div>
+
+                <div class="index-table">
+                    <div class="table-title">Query Conditions</div>
+                    <div style="background: #fff3cd; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+                        <strong>SELECT * FROM Employee<br>
+                        WHERE Dept = 'IT' AND Salary > 70000</strong>
+                    </div>
+                    <div style="font-size: 14px; color: #666; line-height: 1.6;">
+                        This query will use bitmap index scans on:<br>
+                        • Department index<br>
+                        • Salary index<br>
+                        Then combine the bitmaps with AND operation
+                    </div>
+                </div>
+            </div>
+
+            <div class="bitmap-section" id="bitmapSection" style="display: none;">
+                <div class="operation-title">Bitmap Index Operations</div>
+                <div class="bitmap-container">
+                    <div class="bitmap">
+                        <div class="bitmap-title">Dept = 'IT' Bitmap</div>
+                        <div class="bitmap-bits" id="deptBitmap">
+                            <div class="bit bit-0" data-bit="0">0</div>
+                            <div class="bit bit-0" data-bit="1">0</div>
+                            <div class="bit bit-0" data-bit="2">0</div>
+                            <div class="bit bit-0" data-bit="3">0</div>
+                            <div class="bit bit-0" data-bit="4">0</div>
+                        </div>
+                    </div>
+                    
+                    <div class="bitmap">
+                        <div class="bitmap-title">Salary > 70000 Bitmap</div>
+                        <div class="bitmap-bits" id="salaryBitmap">
+                            <div class="bit bit-0" data-bit="0">0</div>
+                            <div class="bit bit-0" data-bit="1">0</div>
+                            <div class="bit bit-0" data-bit="2">0</div>
+                            <div class="bit bit-0" data-bit="3">0</div>
+                            <div class="bit bit-0" data-bit="4">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="operation-section" id="operationSection" style="display: none;">
+                    <div class="operation-title">Bitmap AND Operation</div>
+                    <div class="bitmap">
+                        <div class="bitmap-title">Result Bitmap (Dept='IT' AND Salary>70000)</div>
+                        <div class="bitmap-bits" id="resultBitmap">
+                            <div class="bit bit-0" data-bit="0">0</div>
+                            <div class="bit bit-0" data-bit="1">0</div>
+                            <div class="bit bit-0" data-bit="2">0</div>
+                            <div class="bit bit-0" data-bit="3">0</div>
+                            <div class="bit bit-0" data-bit="4">0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="heap-scan" id="heapScan" style="display: none;">
+                <div class="operation-title">Heap Scan Phase</div>
+                <div style="text-align: center; margin-bottom: 15px; color: #666;">
+                    Only rows with bit = 1 are fetched from the heap
+                </div>
+                <div class="result-rows" id="resultRows">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 0;
+        let animationInterval = null;
+        let animationSteps = [
+            "Starting Bitmap Index Scan for query: WHERE Dept = 'IT' AND Salary > 70000",
+            "Step 1: Scanning Department index for 'IT' values",
+            "Step 2: Creating bitmap for Department = 'IT' condition",
+            "Step 3: Scanning Salary index for values > 70000",
+            "Step 4: Creating bitmap for Salary > 70000 condition",
+            "Step 5: Performing AND operation on both bitmaps",
+            "Step 6: Heap scan - Fetching only rows where bitmap = 1",
+            "Bitmap Index Scan Complete! Found matching rows efficiently."
+        ];
+
+        function startAnimation() {
+            resetAnimation();
+            currentStep = 0;
+            
+            document.querySelector('button[onclick="startAnimation()"]').disabled = true;
+            document.getElementById('nextBtn').disabled = true;
+
+            animationInterval = setInterval(() => {
+                if (currentStep < animationSteps.length) {
+                    nextStep();
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                    document.querySelector('button[onclick="startAnimation()"]').disabled = false;
+                }
+            }, 1500);
+        }
+
+        function resetAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            currentStep = 0;
+            document.getElementById('stepInfo').textContent = "Click 'Start Animation' to begin the Bitmap Index Scan demonstration";
+            document.getElementById('bitmapSection').style.display = 'none';
+            document.getElementById('operationSection').style.display = 'none';
+            document.getElementById('heapScan').style.display = 'none';
+            
+            document.querySelector('button[onclick="startAnimation()"]').disabled = false;
+            document.getElementById('nextBtn').disabled = true;
+            
+            // Reset all highlights
+            document.querySelectorAll('.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
+            });
+            
+            // Reset all bitmaps
+            resetBitmaps();
+            
+            // Clear result rows
+            document.getElementById('resultRows').innerHTML = '';
+        }
+
+        function resetBitmaps() {
+            const bitmaps = ['deptBitmap', 'salaryBitmap', 'resultBitmap'];
+            bitmaps.forEach(bitmapId => {
+                const bitmap = document.getElementById(bitmapId);
+                bitmap.querySelectorAll('.bit').forEach(bit => {
+                    bit.className = 'bit bit-0';
+                    bit.textContent = '0';
+                });
+            });
+        }
+
+        function nextStep() {
+            if (currentStep < animationSteps.length) {
+                document.getElementById('stepInfo').textContent = animationSteps[currentStep];
+                executeStep(currentStep);
+                currentStep++;
+            }
+        }
+
+        function executeStep(step) {
+            switch(step) {
+                case 0:
+                    // Show initial state
+                    break;
+                    
+                case 1:
+                    // Highlight department scanning
+                    highlightDepartmentRows();
+                    document.getElementById('bitmapSection').style.display = 'block';
+                    break;
+                    
+                case 2:
+                    // Create department bitmap
+                    createDepartmentBitmap();
+                    break;
+                    
+                case 3:
+                    // Highlight salary scanning
+                    clearHighlights();
+                    highlightSalaryRows();
+                    break;
+                    
+                case 4:
+                    // Create salary bitmap
+                    createSalaryBitmap();
+                    break;
+                    
+                case 5:
+                    // Show AND operation
+                    document.getElementById('operationSection').style.display = 'block';
+                    performAndOperation();
+                    break;
+                    
+                case 6:
+                    // Heap scan
+                    document.getElementById('heapScan').style.display = 'block';
+                    performHeapScan();
+                    break;
+                    
+                case 7:
+                    // Complete
+                    highlightResultRows();
+                    break;
+            }
+        }
+
+        function highlightDepartmentRows() {
+            const rows = document.querySelectorAll('[data-row]');
+            rows.forEach((row, index) => {
+                const deptCell = row.children[3];
+                if (deptCell.textContent === 'IT') {
+                    row.classList.add('highlighted');
+                }
+            });
+        }
+
+        function highlightSalaryRows() {
+            const rows = document.querySelectorAll('[data-row]');
+            rows.forEach((row, index) => {
+                const salaryCell = row.children[4];
+                if (parseInt(salaryCell.textContent) > 70000) {
+                    row.classList.add('highlighted');
+                }
+            });
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
+            });
+        }
+
+        function createDepartmentBitmap() {
+            const deptData = ['IT', 'HR', 'IT', 'Finance', 'IT'];
+            const deptBitmap = document.getElementById('deptBitmap');
+            
+            deptData.forEach((dept, index) => {
+                const bit = deptBitmap.children[index];
+                if (dept === 'IT') {
+                    bit.className = 'bit bit-1 animated';
+                    bit.textContent = '1';
+                } else {
+                    bit.className = 'bit bit-0';
+                    bit.textContent = '0';
+                }
+            });
+        }
+
+        function createSalaryBitmap() {
+            const salaryData = [75000, 65000, 80000, 70000, 72000];
+            const salaryBitmap = document.getElementById('salaryBitmap');
+            
+            salaryData.forEach((salary, index) => {
+                const bit = salaryBitmap.children[index];
+                if (salary > 70000) {
+                    bit.className = 'bit bit-1 animated';
+                    bit.textContent = '1';
+                } else {
+                    bit.className = 'bit bit-0';
+                    bit.textContent = '0';
+                }
+            });
+        }
+
+        function performAndOperation() {
+            const deptBits = Array.from(document.getElementById('deptBitmap').children);
+            const salaryBits = Array.from(document.getElementById('salaryBitmap').children);
+            const resultBits = Array.from(document.getElementById('resultBitmap').children);
+            
+            resultBits.forEach((bit, index) => {
+                const deptVal = deptBits[index].textContent;
+                const salaryVal = salaryBits[index].textContent;
+                const result = (deptVal === '1' && salaryVal === '1') ? '1' : '0';
+                
+                setTimeout(() => {
+                    if (result === '1') {
+                        bit.className = 'bit bit-1 animated';
+                        bit.textContent = '1';
+                    } else {
+                        bit.className = 'bit bit-0';
+                        bit.textContent = '0';
+                    }
+                }, index * 200);
+            });
+        }
+
+        function performHeapScan() {
+            const resultBits = Array.from(document.getElementById('resultBitmap').children);
+            const resultRows = document.getElementById('resultRows');
+            const employeeData = [
+                ['0', 'Alice', '28', 'IT', '75000'],
+                ['1', 'Bob', '32', 'HR', '65000'],
+                ['2', 'Carol', '29', 'IT', '80000'],
+                ['3', 'David', '35', 'Finance', '70000'],
+                ['4', 'Eve', '26', 'IT', '72000']
+            ];
+            
+            resultBits.forEach((bit, index) => {
+                if (bit.textContent === '1') {
+                    setTimeout(() => {
+                        const resultDiv = document.createElement('div');
+                        resultDiv.className = 'result-row animated';
+                        const employee = employeeData[index];
+                        resultDiv.textContent = `Row ${employee[0]}: ${employee[1]}, Age: ${employee[2]}, Dept: ${employee[3]}, Salary: ${employee[4]}`;
+                        resultRows.appendChild(resultDiv);
+                    }, index * 500);
+                }
+            });
+        }
+
+        function highlightResultRows() {
+            const rows = document.querySelectorAll('[data-row]');
+            rows.forEach((row, index) => {
+                const deptCell = row.children[3];
+                const salaryCell = row.children[4];
+                if (deptCell.textContent === 'IT' && parseInt(salaryCell.textContent) > 70000) {
+                    setTimeout(() => {
+                        row.classList.add('highlighted');
+                    }, index * 200);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

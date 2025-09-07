@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Scan Animation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .animation-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-info {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .table-section {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .data-table, .index-table {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 350px;
+        }
+
+        .table-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .table-row {
+            display: flex;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .table-header {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+
+        .table-cell {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border-right: 1px solid #ecf0f1;
+        }
+
+        .table-cell:last-child {
+            border-right: none;
+        }
+
+        .highlighted {
+            background: #fff3cd !important;
+            border: 2px solid #ffc107;
+            transform: scale(1.02);
+        }
+        
+        .heap-scan {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .operation-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .result-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .result-row {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #155724;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .animated {
+            animation: pulse 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Index Scan Animation</h1>
+        
+        <div class="controls">
+            <button onclick="startAnimation()">Start Animation</button>
+            <button onclick="resetAnimation()">Reset</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="step-info" id="stepInfo">
+                Click "Start Animation" to begin the Index Scan demonstration
+            </div>
+
+            <div class="table-section">
+                <div class="data-table">
+                    <div class="table-title">Employee Table (Heap)</div>
+                    <div class="table-row table-header">
+                        <div class="table-cell">Row ID</div>
+                        <div class="table-cell">Name</div>
+                        <div class="table-cell">Age</div>
+                        <div class="table-cell">Dept</div>
+                        <div class="table-cell">Salary</div>
+                    </div>
+                    <div class="table-row" data-row="0">
+                        <div class="table-cell">0</div>
+                        <div class="table-cell">Alice</div>
+                        <div class="table-cell">28</div>
+                        <div class="table-cell">IT</div>
+                        <div class="table-cell">75000</div>
+                    </div>
+                    <div class="table-row" data-row="1">
+                        <div class="table-cell">1</div>
+                        <div class="table-cell">Bob</div>
+                        <div class="table-cell">32</div>
+                        <div class="table-cell">HR</div>
+                        <div class="table-cell">65000</div>
+                    </div>
+                    <div class="table-row" data-row="2">
+                        <div class="table-cell">2</div>
+                        <div class="table-cell">Carol</div>
+                        <div class="table-cell">29</div>
+                        <div class="table-cell">IT</div>
+                        <div class="table-cell">80000</div>
+                    </div>
+                    <div class="table-row" data-row="3">
+                        <div class="table-cell">3</div>
+                        <div class="table-cell">David</div>
+                        <div class="table-cell">35</div>
+                        <div class="table-cell">Finance</div>
+                        <div class="table-cell">70000</div>
+                    </div>
+                    <div class="table-row" data-row="4">
+                        <div class="table-cell">4</div>
+                        <div class="table-cell">Eve</div>
+                        <div class="table-cell">26</div>
+                        <div class="table-cell">IT</div>
+                        <div class="table-cell">72000</div>
+                    </div>
+                </div>
+
+                <div class="index-table">
+                    <div class="table-title">Age Index (B-Tree)</div>
+                     <div style="background: #fff3cd; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+                        <strong>SELECT * FROM Employee<br>
+                        WHERE Age = 29</strong>
+                    </div>
+                    <div class="table-row table-header">
+                        <div class="table-cell">Age</div>
+                        <div class="table-cell">Row ID Pointer</div>
+                    </div>
+                    <div class="table-row" data-index="26">
+                        <div class="table-cell">26</div>
+                        <div class="table-cell">4</div>
+                    </div>
+                    <div class="table-row" data-index="28">
+                        <div class="table-cell">28</div>
+                        <div class="table-cell">0</div>
+                    </div>
+                    <div class="table-row" data-index="29">
+                        <div class="table-cell">29</div>
+                        <div class="table-cell">2</div>
+                    </div>
+                    <div class="table-row" data-index="32">
+                        <div class="table-cell">32</div>
+                        <div class="table-cell">1</div>
+                    </div>
+                    <div class="table-row" data-index="35">
+                        <div class="table-cell">35</div>
+                        <div class="table-cell">3</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="heap-scan" id="heapScan" style="display: none;">
+                <div class="operation-title">Heap Fetch Result</div>
+                <div class="result-rows" id="resultRows"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let animationInterval = null;
+        const employeeData = [
+            { id: 0, name: 'Alice', age: 28, dept: 'IT', salary: 75000 },
+            { id: 1, name: 'Bob', age: 32, dept: 'HR', salary: 65000 },
+            { id: 2, name: 'Carol', age: 29, dept: 'IT', salary: 80000 },
+            { id: 3, name: 'David', age: 35, dept: 'Finance', salary: 70000 },
+            { id: 4, name: 'Eve', age: 26, dept: 'IT', salary: 72000 }
+        ];
+
+        function startAnimation() {
+            resetAnimation();
+            document.querySelector('button[onclick="startAnimation()"]').disabled = true;
+            
+            const steps = [
+                {
+                    info: "Step 1: Searching the Age Index for value = 29",
+                    action: () => highlightIndex(29)
+                },
+                {
+                    info: "Step 2: Found matching entry in index. Pointer to Row ID is 2.",
+                    action: () => {}
+                },
+                {
+                    info: "Step 3: Using Row ID 2 to fetch the row directly from the heap.",
+                    action: () => highlightHeapRow(2)
+                },
+                {
+                    info: "Step 4: Adding the fetched row to the results.",
+                    action: () => addResultRow(employeeData[2])
+                },
+                {
+                    info: "Index Scan Complete! Row fetched efficiently without scanning the whole table.",
+                    action: () => document.querySelector('button[onclick="startAnimation()"]').disabled = false
+                }
+            ];
+
+            let currentStep = 0;
+            animationInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    document.getElementById('stepInfo').textContent = steps[currentStep].info;
+                    steps[currentStep].action();
+                    currentStep++;
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            }, 2000);
+        }
+
+        function resetAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            document.getElementById('stepInfo').textContent = "Click 'Start Animation' to begin";
+            document.querySelector('button[onclick="startAnimation()"]').disabled = false;
+            document.getElementById('heapScan').style.display = 'none';
+            document.getElementById('resultRows').innerHTML = '';
+            
+            document.querySelectorAll('.highlighted').forEach(el => {
+                el.classList.remove('highlighted');
+            });
+        }
+
+        function highlightIndex(age) {
+            const indexRow = document.querySelector(`.index-table [data-index="${age}"]`);
+            if (indexRow) {
+                indexRow.classList.add('highlighted');
+            }
+        }
+
+        function highlightHeapRow(rowId) {
+            document.getElementById('heapScan').style.display = 'block';
+            const heapRow = document.querySelector(`.data-table [data-row="${rowId}"]`);
+            if (heapRow) {
+                heapRow.classList.add('highlighted');
+            }
+        }
+
+        function addResultRow(data) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result-row animated';
+            resultDiv.textContent = `Row ${data.id}: ${data.name}, Age: ${data.age}, Dept: ${data.dept}, Salary: $${data.salary}`;
+            document.getElementById('resultRows').appendChild(resultDiv);
+        }
+    </script>
+</body>
+</html>

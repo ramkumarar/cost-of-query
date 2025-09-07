@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Merge Join Animation</title>
+    <style>
+        :root {
+            --page-bg: linear-gradient(135deg, #00b09b 0%, #96c93d 100%);
+            --container-bg: white;
+            --area-bg: #f8f9fa;
+            --header-color: #2c3e50;
+            --info-bg: linear-gradient(45deg, #3498db, #2980b9);
+            --table-header-bg: #34495e;
+            --compare-highlight: #f1c40f; /* Yellow for comparison */
+            --match-highlight: #2ecc71; /* Green for matches */
+            --pointer-color: #e74c3c; /* Red for pointers */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--page-bg);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 95vw;
+            margin: 0 auto;
+            background: var(--container-bg);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--header-color);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .animation-area {
+            background: var(--area-bg);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .step-info {
+            background: var(--info-bg);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 500;
+            text-align: center;
+            min-height: 50px;
+        }
+
+        .tables-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .table-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        .data-table th {
+            background-color: var(--table-header-bg);
+            color: white;
+        }
+        .data-table tr {
+            transition: background-color 0.3s ease;
+        }
+
+        /* Highlighting */
+        .compare-row {
+            background-color: var(--compare-highlight) !important;
+            font-weight: bold;
+        }
+        .match-found {
+            background-color: var(--match-highlight) !important;
+            color: white;
+            font-weight: bold;
+        }
+        .pointer-active {
+            border: 2px solid var(--pointer-color);
+            box-shadow: 0 0 8px var(--pointer-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Merge Join Animation</h1>
+        <div class="controls">
+            <button id="startBtn" onclick="startAnimation()">Start Animation</button>
+            <button id="nextBtn" onclick="manualNextStep()">Next Step</button>
+            <button id="resetBtn" onclick="resetAnimation()">Reset</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="step-info" id="stepInfo">
+                <strong>Query:</strong> SELECT e.name, d.domain_name FROM Employee e JOIN Domain d ON e.domain_id = d.id;<br>
+                (Merge Join is efficient for large, pre-sorted tables or when sorting cost is low)
+            </div>
+            <div class="tables-container">
+                <div class="table-wrapper">
+                    <div class="table-title">Table 1: Employee</div>
+                    <table class="data-table" id="employeeTable">
+                        <thead><tr><th>Name</th><th>Domain_ID</th></tr></thead>
+                        <tbody>
+                            <tr data-domain="3"><td>Alice</td><td>3</td></tr>
+                            <tr data-domain="1"><td>Bob</td><td>1</td></tr>
+                            <tr data-domain="3"><td>Carol</td><td>3</td></tr>
+                            <tr data-domain="2"><td>David</td><td>2</td></tr>
+                            <tr data-domain="1"><td>Eve</td><td>1</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-title">Table 2: Domain</div>
+                    <table class="data-table" id="domainTable">
+                        <thead><tr><th>ID (PK)</th><th>Domain_Name</th></tr></thead>
+                        <tbody>
+                            <tr data-id="3"><td>3</td><td>Digital</td></tr>
+                            <tr data-id="1"><td>1</td><td>MMG</td></tr>
+                            <tr data-id="4"><td>4</td><td>DOCTA</td></tr>
+                            <tr data-id="2"><td>2</td><td>MMM</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-title">Join Results</div>
+                    <table class="data-table" id="resultTable">
+                        <thead><tr><th>Name</th><th>Domain_Name</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let animationInterval = null;
+        let currentStep = 0;
+        const steps = [];
+
+        const employeeTable = document.getElementById('employeeTable').tBodies[0];
+        const domainTable = document.getElementById('domainTable').tBodies[0];
+        const resultTable = document.getElementById('resultTable').tBodies[0];
+        const stepInfo = document.getElementById('stepInfo');
+        const startBtn = document.getElementById('startBtn');
+        const nextBtn = document.getElementById('nextBtn');
+
+        // Store original unsorted state for reset
+        const originalEmployeeHTML = employeeTable.innerHTML;
+        const originalDomainHTML = domainTable.innerHTML;
+
+        let employeePointer = 0;
+        let domainPointer = 0;
+
+        // Function to visually sort a table
+        function sortTable(tableBody, datasetKey) {
+            const rows = Array.from(tableBody.rows);
+            rows.sort((a, b) => {
+                const valA = parseInt(a.dataset[datasetKey]);
+                const valB = parseInt(b.dataset[datasetKey]);
+                return valA - valB;
+            });
+            // Re-append sorted rows
+            tableBody.innerHTML = '';
+            rows.forEach(row => tableBody.appendChild(row));
+        }
+
+        // Generate steps for Merge Join
+        function generateMergeJoinSteps() {
+            steps.length = 0; // Clear previous steps
+            employeePointer = 0;
+            domainPointer = 0;
+
+            steps.push({ type: 'sort', tableId: 'employeeTable', datasetKey: 'domain', text: 'Phase 1: Sort the Employee table on the join key (Domain_ID).' });
+            steps.push({ type: 'sort', tableId: 'domainTable', datasetKey: 'id', text: 'Phase 2: Sort the Domain table on the join key (ID).' });
+            steps.push({ type: 'info', text: 'Phase 3: Start merging by comparing rows from both sorted tables.' });
+
+            // Create sorted arrays of the data to generate the correct subsequent steps
+            const sortedEmployeeRows = Array.from(document.getElementById('employeeTable').tBodies[0].rows).sort((a, b) => parseInt(a.dataset.domain) - parseInt(b.dataset.domain));
+            const sortedDomainRows = Array.from(document.getElementById('domainTable').tBodies[0].rows).sort((a, b) => parseInt(a.dataset.id) - parseInt(b.dataset.id));
+
+            while (employeePointer < sortedEmployeeRows.length && domainPointer < sortedDomainRows.length) {
+                const employeeRow = sortedEmployeeRows[employeePointer];
+                const domainRow = sortedDomainRows[domainPointer];
+
+                const employeeDomainId = parseInt(employeeRow.dataset.domain);
+                const domainId = parseInt(domainRow.dataset.id);
+
+                steps.push({ 
+                    type: 'compare', 
+                    employeeIdx: employeePointer, 
+                    domainIdx: domainPointer, 
+                    employeeVal: employeeDomainId, 
+                    domainVal: domainId,
+                    text: `Comparing Employee.Domain_ID (${employeeDomainId}) with Domain.ID (${domainId}).`
+                });
+
+                if (employeeDomainId === domainId) {
+                    // Keys match. Find the extent of the matching groups.
+                    let employeeGroupEnd = employeePointer;
+                    while (employeeGroupEnd < sortedEmployeeRows.length && parseInt(sortedEmployeeRows[employeeGroupEnd].dataset.domain) === employeeDomainId) {
+                        employeeGroupEnd++;
+                    }
+                    let domainGroupEnd = domainPointer;
+                    while (domainGroupEnd < sortedDomainRows.length && parseInt(sortedDomainRows[domainGroupEnd].dataset.id) === domainId) {
+                        domainGroupEnd++;
+                    }
+
+                    // Generate results for the Cartesian product
+                    for (let i = employeePointer; i < employeeGroupEnd; i++) {
+                        for (let j = domainPointer; j < domainGroupEnd; j++) {
+                            const matchingEmployeeRow = sortedEmployeeRows[i];
+                            const matchingDomainRow = sortedDomainRows[j];
+                            steps.push({
+                                type: 'result',
+                                employeeIdx: i,
+                                domainIdx: j,
+                                employeeName: matchingEmployeeRow.cells[0].textContent,
+                                domainName: matchingDomainRow.cells[1].textContent,
+                                text: `Match found! Employee '${matchingEmployeeRow.cells[0].textContent}' joins with Domain '${matchingDomainRow.cells[1].textContent}'.`
+                            });
+                        }
+                    }
+                    // Advance pointers to the end of the matched groups
+                    employeePointer = employeeGroupEnd;
+                    domainPointer = domainGroupEnd;
+
+                } else if (employeeDomainId < domainId) {
+                    steps.push({ 
+                        type: 'advance', 
+                        table: 'employee', 
+                        employeeIdx: employeePointer, 
+                        domainIdx: domainPointer,
+                        text: `Employee.Domain_ID (${employeeDomainId}) is smaller. Advance Employee pointer.`
+                    });
+                    employeePointer++;
+                } else { // employeeDomainId > domainId
+                    steps.push({ 
+                        type: 'advance', 
+                        table: 'domain', 
+                        employeeIdx: employeePointer, 
+                        domainIdx: domainPointer,
+                        text: `Domain.ID (${domainId}) is smaller. Advance Domain pointer.`
+                    });
+                    domainPointer++;
+                }
+            }
+            steps.push({ type: 'done', text: 'Animation Complete. Merge Join efficiently processed sorted tables.' });
+        }
+
+        function executeStep(step) {
+            // Clear all previous highlights
+            document.querySelectorAll('.data-table tr').forEach(r => r.className = '');
+
+            stepInfo.innerHTML = `<strong>${step.text}</strong>`;
+
+            if (step.type === 'sort') {
+                const tableBody = document.getElementById(step.tableId).tBodies[0];
+                sortTable(tableBody, step.datasetKey);
+                // Highlight the whole table to show it's being sorted
+                tableBody.parentElement.classList.add('compare-row');
+                setTimeout(() => tableBody.parentElement.classList.remove('compare-row'), 1000);
+            } else if (step.type === 'compare' || step.type === 'advance') {
+                employeeTable.rows[step.employeeIdx]?.classList.add('compare-row');
+                domainTable.rows[step.domainIdx]?.classList.add('compare-row');
+            } else if (step.type === 'result') {
+                employeeTable.rows[step.employeeIdx].classList.add('match-found');
+                domainTable.rows[step.domainIdx].classList.add('match-found');
+                const newRow = resultTable.insertRow();
+                newRow.innerHTML = `<td>${step.employeeName}</td><td>${step.domainName}</td>`;
+            } else if (step.type === 'done') {
+                // No specific highlighting for done, just info text
+            }
+        }
+
+        function startAnimation() {
+            resetAnimation();
+            generateMergeJoinSteps(); // Generate steps at start
+            startBtn.disabled = true;
+            nextBtn.disabled = false; // Enable next button for manual step through
+
+            animationInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    executeStep(steps[currentStep]);
+                    currentStep++;
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                    startBtn.disabled = false;
+                    nextBtn.disabled = true;
+                }
+            }, 1500);
+        }
+
+        function manualNextStep() {
+            if (animationInterval) clearInterval(animationInterval);
+            animationInterval = null;
+            startBtn.disabled = true;
+
+            if (currentStep < steps.length) {
+                executeStep(steps[currentStep]);
+                currentStep++;
+            }
+            
+            if (currentStep >= steps.length) {
+                nextBtn.disabled = true;
+                startBtn.disabled = false;
+            }
+        }
+
+        function resetAnimation() {
+            if (animationInterval) clearInterval(animationInterval);
+            currentStep = 0;
+            resultTable.innerHTML = '';
+            // Restore original unsorted tables
+            employeeTable.innerHTML = originalEmployeeHTML;
+            domainTable.innerHTML = originalDomainHTML;
+            document.querySelectorAll('.data-table tr').forEach(r => r.className = '');
+            stepInfo.innerHTML = '<strong>Query:</strong> SELECT e.name, d.domain_name FROM Employee e JOIN Domain d ON e.domain_id = d.id;<br>(Merge Join is efficient for large, pre-sorted tables or when sorting cost is low)';
+            startBtn.disabled = false;
+            nextBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>

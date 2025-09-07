@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hash Join Animation</title>
+    <style>
+        :root {
+            --page-bg: linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%);
+            --container-bg: white;
+            --area-bg: #f8f9fa;
+            --header-color: #2c3e50;
+            --info-bg: linear-gradient(45deg, #3498db, #2980b9);
+            --table-header-bg: #34495e;
+            --build-highlight: #f1c40f; /* Yellow for build phase */
+            --probe-highlight: #e67e22; /* Orange for probe phase */
+            --match-highlight: #2ecc71; /* Green for matches */
+            --hash-table-bg: #e0f7fa; /* Light blue for hash table */
+            --hash-bucket-bg: #bbdefb; /* Lighter blue for buckets */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--page-bg);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 95vw;
+            margin: 0 auto;
+            background: var(--container-bg);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--header-color);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .animation-area {
+            background: var(--area-bg);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .step-info {
+            background: var(--info-bg);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1em;
+            font-weight: 500;
+            text-align: center;
+            min-height: 50px;
+        }
+
+        .tables-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .table-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th, .data-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+        .data-table th {
+            background-color: var(--table-header-bg);
+            color: white;
+        }
+        .data-table tr {
+            transition: background-color 0.3s ease;
+        }
+
+        /* Hash Table Specific Styles */
+        .hash-table-container {
+            flex: 1;
+            min-width: 300px;
+            background: var(--hash-table-bg);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .hash-table-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+            color: var(--header-color);
+        }
+
+        .hash-buckets {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hash-bucket {
+            background: var(--hash-bucket-bg);
+            border: 1px solid #90caf9;
+            border-radius: 5px;
+            padding: 8px;
+            min-height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Courier New', Courier, monospace;
+            transition: all 0.3s ease;
+        }
+
+        .hash-bucket.highlight-build {
+            background-color: var(--build-highlight) !important;
+            border-color: #f39c12;
+            font-weight: bold;
+        }
+
+        .hash-bucket.highlight-probe {
+            background-color: var(--probe-highlight) !important;
+            border-color: #d35400;
+            font-weight: bold;
+        }
+
+        .hash-bucket.highlight-match {
+            background-color: var(--match-highlight) !important;
+            border-color: #27ae60;
+            color: white;
+            font-weight: bold;
+        }
+
+        /* Highlighting */
+        .build-row {
+            background-color: var(--build-highlight) !important;
+            font-weight: bold;
+        }
+        .probe-row {
+            background-color: var(--probe-highlight) !important;
+            font-weight: bold;
+        }
+        .match-found {
+            background-color: var(--match-highlight) !important;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hash Join Animation</h1>
+        <div class="controls">
+            <button id="startBtn" onclick="startAnimation()">Start Animation</button>
+            <button id="nextBtn" onclick="manualNextStep()">Next Step</button>
+            <button id="resetBtn" onclick="resetAnimation()">Reset</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="step-info" id="stepInfo">
+                <strong>Query:</strong> SELECT e.name, d.domain_name FROM Employee e JOIN Domain d ON e.domain_id = d.id;<br>
+                (Hash Join is chosen when tables are large and unsorted, or no suitable index exists)
+            </div>
+            <div class="tables-container">
+                <div class="table-wrapper">
+                    <div class="table-title">Outer Table: Employee (Probe Table)</div>
+                    <table class="data-table" id="employeeTable">
+                        <thead><tr><th>Name</th><th>Domain_ID</th></tr></thead>
+                        <tbody>
+                            <tr data-domain="3"><td>Alice</td><td>3</td></tr>
+                            <tr data-domain="1"><td>Bob</td><td>1</td></tr>
+                            <tr data-domain="3"><td>Carol</td><td>3</td></tr>
+                            <tr data-domain="2"><td>David</td><td>2</td></tr>
+                            <tr data-domain="1"><td>Eve</td><td>1</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-title">Inner Table: Domain (Build Table)</div>
+                    <table class="data-table" id="domainTable">
+                        <thead><tr><th>ID (PK)</th><th>Domain_Name</th></tr></thead>
+                        <tbody>
+                            <tr data-id="1"><td>1</td><td>MMG</td></tr>
+                            <tr data-id="2"><td>2</td><td>MMM</td></tr>
+                            <tr data-id="3"><td>3</td><td>Digital</td></tr>
+                            <tr data-id="4"><td>4</td><td>DOCTA</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="hash-table-container">
+                    <div class="hash-table-title">Hash Table on Domain.id</div>
+                    <div class="hash-buckets" id="hashTable">
+                        <!-- Hash buckets will be dynamically added here -->
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <div class="table-title">Join Results</div>
+                    <table class="data-table" id="resultTable">
+                        <thead><tr><th>Name</th><th>Domain_Name</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let animationInterval = null;
+        let currentStep = 0;
+        const steps = [];
+        const hashTableData = {}; // Stores the actual hash table { hash_value: [ {id, name} ] }
+
+        const employeeTable = document.getElementById('employeeTable').tBodies[0];
+        const domainTable = document.getElementById('domainTable').tBodies[0];
+        const resultTable = document.getElementById('resultTable').tBodies[0];
+        const stepInfo = document.getElementById('stepInfo');
+        const startBtn = document.getElementById('startBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const hashTableDiv = document.getElementById('hashTable');
+
+        // Simple hash function (for demonstration purposes)
+        function simpleHash(value, numBuckets) {
+            return value % numBuckets;
+        }
+
+        // Generate steps for Hash Join
+        function generateHashJoinSteps() {
+            steps.length = 0; // Clear previous steps
+
+            const numBuckets = 5; // Fixed number of buckets for visualization
+            for (let i = 0; i < numBuckets; i++) {
+                hashTableData[i] = []; // Initialize empty buckets
+            }
+
+            steps.push({ type: 'info', text: `Phase 1: Build Hash Table from the smaller table (Domain). Using ${numBuckets} buckets.` });
+
+            // Build Phase
+            for (let i = 0; i < domainTable.rows.length; i++) {
+                const row = domainTable.rows[i];
+                const id = parseInt(row.dataset.id);
+                const domainName = row.cells[1].textContent;
+                const hash = simpleHash(id, numBuckets);
+
+                steps.push({ 
+                    type: 'build', 
+                    table: 'domain', 
+                    rowIndex: i, 
+                    id: id, 
+                    hash: hash,
+                    text: `Take row ${i + 1} from Domain (ID: ${id}). Hash value: ${hash}. Add to bucket ${hash}.`
+                });
+                hashTableData[hash].push({ id: id, domainName: domainName, originalRowIndex: i });
+            }
+
+            steps.push({ type: 'info', text: 'Phase 2: Probe Hash Table with rows from the larger table (Employee).' });
+
+            // Probe Phase
+            for (let i = 0; i < employeeTable.rows.length; i++) {
+                const row = employeeTable.rows[i];
+                const employeeName = row.cells[0].textContent;
+                const domainId = parseInt(row.dataset.domain);
+                const hash = simpleHash(domainId, numBuckets);
+
+                steps.push({ 
+                    type: 'probe', 
+                    table: 'employee', 
+                    rowIndex: i, 
+                    domainId: domainId, 
+                    hash: hash,
+                    text: `Take row ${i + 1} from Employee (Domain_ID: ${domainId}). Hash value: ${hash}. Probe bucket ${hash}.`
+                });
+
+                const matches = hashTableData[hash].filter(item => item.id === domainId);
+                if (matches.length > 0) {
+                    matches.forEach(match => {
+                        steps.push({ 
+                            type: 'result', 
+                            outerRowIndex: i, 
+                            innerRowIndex: match.originalRowIndex, 
+                            employeeName: employeeName, 
+                            domainName: match.domainName,
+                            hash: hash,
+                            text: `Match found in bucket ${hash}! Employee '${employeeName}' joins with Domain '${match.domainName}'.`
+                        });
+                    });
+                } else {
+                    steps.push({ 
+                        type: 'info', 
+                        text: `No match found for Domain_ID ${domainId} in bucket ${hash}.`
+                    });
+                }
+            }
+            steps.push({ type: 'done', text: 'Animation Complete. Hash Join efficiently found matches by building and probing a hash table.' });
+        }
+
+        function renderHashTable() {
+            hashTableDiv.innerHTML = '';
+            const numBuckets = 5; // Must match the simpleHash function's numBuckets
+            for (let i = 0; i < numBuckets; i++) {
+                const bucketDiv = document.createElement('div');
+                bucketDiv.className = 'hash-bucket';
+                bucketDiv.id = `bucket-${i}`;
+                const content = hashTableData[i].map(item => `ID: ${item.id} (${item.domainName})`).join(', ');
+                bucketDiv.textContent = `Bucket ${i}: [${content}]`;
+                hashTableDiv.appendChild(bucketDiv);
+            }
+        }
+
+        function executeStep(step) {
+            // Clear all previous highlights
+            document.querySelectorAll('.data-table tr').forEach(r => r.className = '');
+            document.querySelectorAll('.hash-bucket').forEach(b => b.classList.remove('highlight-build', 'highlight-probe', 'highlight-match'));
+
+            stepInfo.innerHTML = `<strong>${step.text}</strong>`;
+
+            if (step.type === 'build') {
+                domainTable.rows[step.rowIndex].classList.add('build-row');
+                document.getElementById(`bucket-${step.hash}`).classList.add('highlight-build');
+                // Update hash table content dynamically
+                const bucketDiv = document.getElementById(`bucket-${step.hash}`);
+                const currentContent = hashTableData[step.hash].map(item => `ID: ${item.id} (${item.domainName})`).join(', ');
+                bucketDiv.textContent = `Bucket ${step.hash}: [${currentContent}]`;
+            } else if (step.type === 'probe') {
+                employeeTable.rows[step.rowIndex].classList.add('probe-row');
+                document.getElementById(`bucket-${step.hash}`).classList.add('highlight-probe');
+            } else if (step.type === 'result') {
+                employeeTable.rows[step.outerRowIndex].classList.add('match-found');
+                document.getElementById(`bucket-${step.hash}`).classList.add('highlight-match');
+                const newRow = resultTable.insertRow();
+                newRow.innerHTML = `<td>${step.employeeName}</td><td>${step.domainName}</td>`;
+            } else if (step.type === 'done') {
+                // No specific highlighting for done, just info text
+            }
+        }
+
+        function startAnimation() {
+            resetAnimation();
+            generateHashJoinSteps(); // Generate steps at start
+            renderHashTable(); // Initial render of empty hash table buckets
+            startBtn.disabled = true;
+            nextBtn.disabled = false; // Enable next button for manual step through
+
+            animationInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    executeStep(steps[currentStep]);
+                    currentStep++;
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                    startBtn.disabled = false;
+                    nextBtn.disabled = true;
+                }
+            }, 1500);
+        }
+
+        function manualNextStep() {
+            if (animationInterval) clearInterval(animationInterval);
+            animationInterval = null;
+            startBtn.disabled = true;
+
+            if (currentStep < steps.length) {
+                executeStep(steps[currentStep]);
+                currentStep++;
+            }
+            
+            if (currentStep >= steps.length) {
+                nextBtn.disabled = true;
+                startBtn.disabled = false;
+            }
+        }
+
+        function resetAnimation() {
+            if (animationInterval) clearInterval(animationInterval);
+            currentStep = 0;
+            resultTable.innerHTML = '';
+            document.querySelectorAll('.data-table tr').forEach(r => r.className = '');
+            document.querySelectorAll('.hash-bucket').forEach(b => b.classList.remove('highlight-build', 'highlight-probe', 'highlight-match'));
+            stepInfo.innerHTML = '<strong>Query:</strong> SELECT e.name, d.domain_name FROM Employee e JOIN Domain d ON e.domain_id = d.id;<br>(Hash Join is chosen when tables are large and unsorted, or no suitable index exists)';
+            startBtn.disabled = false;
+            nextBtn.disabled = true;
+            
+            // Clear hash table data and re-render empty buckets
+            for (const key in hashTableData) {
+                delete hashTableData[key];
+            }
+            const numBuckets = 5;
+            for (let i = 0; i < numBuckets; i++) {
+                hashTableData[i] = [];
+            }
+            renderHashTable();
+        }
+    </script>
+</body>
+</html>

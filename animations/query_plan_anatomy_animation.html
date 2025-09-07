@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatomy of a Query Plan</title>
+    <style>
+        :root {
+            --bg-color: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+            --container-bg: white;
+            --plan-bg: #eef2f7;
+            --header-color: #2c3e50;
+            --info-bg: linear-gradient(45deg, #3498db, #2980b9);
+            --highlight-node: rgba(231, 76, 60, 0.8);
+            --highlight-relation: rgba(46, 204, 113, 0.8);
+            --highlight-cost: rgba(241, 196, 15, 0.8);
+            --highlight-rows: rgba(155, 89, 182, 0.8);
+            --highlight-loops: rgba(52, 152, 219, 0.8);
+            --highlight-modifier: rgba(230, 126, 34, 0.8);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--bg-color);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 95vw;
+            margin: 0 auto;
+            background: var(--container-bg);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--header-color);
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .animation-area {
+            display: flex;
+            gap: 20px;
+        }
+
+        .plan-container {
+            flex: 2.5;
+            background: var(--plan-bg);
+            border-radius: 10px;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .info-container {
+            flex: 1;
+        }
+
+        .query-plan {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre;
+            position: relative;
+        }
+        .plan-line {
+            transition: background-color 0.3s ease;
+            border-radius: 3px;
+        }
+        .plan-line.active {
+            background-color: #cce5ff;
+        }
+
+        .explanation-box {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            min-height: 120px;
+        }
+        #stepInfo {
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        #details {
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #555;
+        }
+
+        .legend {
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #ddd;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            margin-right: 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        /* Highlight spans */
+        .hl {
+            border-radius: 3px;
+            padding: 1px 3px;
+            color: black;
+            font-weight: bold;
+        }
+        .hl-node { background-color: var(--highlight-node); }
+        .hl-relation { background-color: var(--highlight-relation); }
+        .hl-cost { background-color: var(--highlight-cost); }
+        .hl-rows { background-color: var(--highlight-rows); }
+        .hl-loops { background-color: var(--highlight-loops); }
+        .hl-modifier { background-color: var(--highlight-modifier); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Anatomy of a PostgreSQL Query Plan</h1>
+        <div class="controls">
+            <button id="startBtn" onclick="startAnimation()">Start Animation</button>
+            <button id="nextBtn" onclick="manualNextStep()">Next Step</button>
+            <button id="resetBtn" onclick="resetAnimation()">Reset</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="plan-container">
+                <div class="query-plan" id="queryPlan">
+<div class="plan-line" id="line-0"> Unique (<span class="hl" data-part="cost">cost=22.67..22.70</span> <span class="hl" data-part="rows">rows=2</span> width=44) (actual time=0.066..0.067 rows=2 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-1">   ->  <span class="hl" data-part="node">Sort</span> (<span class="hl" data-part="cost">cost=22.67..22.68</span> <span class="hl" data-part="rows">rows=3</span> width=44) (actual time=0.065..0.065 rows=2 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-2">         <span class="hl" data-part="modifier">Sort Key: la.account_id, la.external_entity_id, la.created_at</span></div>
+<div class="plan-line" id="line-3">         Sort Method: quicksort  Memory: 25kB</div>
+<div class="plan-line" id="line-4">         ->  <span class="hl" data-part="node">Hash Join</span> (<span class="hl" data-part="cost">cost=10.66..22.65</span> <span class="hl" data-part="rows">rows=3</span> width=44) (actual time=0.048..0.052 rows=2 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-5">               <span class="hl" data-part="modifier">Hash Cond: (la.loan_application_status_id = loan_application_statuses.loan_application_status_id)</span></div>
+<div class="plan-line" id="line-6">               ->  <span class="hl" data-part="node">Bitmap Heap Scan</span> on <span class="hl" data-part="relation">loan_applications la</span> (<span class="hl" data-part="cost">cost=9.21..21.16</span> <span class="hl" data-part="rows">rows=3</span> width=36) (actual time=0.022..0.025 rows=2 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-7">                     <span class="hl" data-part="modifier">Recheck Cond: ((account_id = ANY ('{7812011}'::integer[])) OR (external_entity_id = ANY ('{NULL}'::integer[])))</span></div>
+<div class="plan-line" id="line-8">                     ->  <span class="hl" data-part="node">BitmapOr</span> (<span class="hl" data-part="cost">cost=9.21..9.21</span> <span class="hl" data-part="rows">rows=3</span> width=0) (actual time=0.016..0.016 rows=0 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-9">                           ->  <span class="hl" data-part="node">Bitmap Index Scan</span> on <span class="hl" data-part="relation">index_loan_applications_on_account_id</span> (<span class="hl" data-part="cost">cost=0.00..4.62</span> <span class="hl" data-part="rows">rows=3</span> width=0) (actual time=0.014..0.014 rows=2 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-10">                                 Index Cond: (account_id = ANY ('{7812011}'::integer[]))</div>
+<div class="plan-line" id="line-11">                           ->  <span class="hl" data-part="node">Bitmap Index Scan</span> on <span class="hl" data-part="relation">index_loan_applications_on_external_entity_id</span> (<span class="hl" data-part="cost">cost=0.00..4.60</span> <span class="hl" data-part="rows">rows=1</span> width=0) (actual time=0.001..0.001 rows=0 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-12">                                 Index Cond: (external_entity_id = ANY ('{NULL}'::integer[]))</div>
+<div class="plan-line" id="line-13">               ->  <span class="hl" data-part="node">Hash</span> (<span class="hl" data-part="cost">cost=1.20..1.20</span> <span class="hl" data-part="rows">rows=20</span> width=16) (actual time=0.016..0.016 rows=20 <span class="hl" data-part="loops">loops=1</span>)</div>
+<div class="plan-line" id="line-14">                     Buckets: 1024  Batches: 1  Memory Usage: 1kB</div>
+<div class="plan-line" id="line-15">                     ->  <span class="hl" data-part="node">Seq Scan</span> on <span class="hl" data-part="relation">loan_application_statuses</span> (<span class="hl" data-part="cost">cost=0.00..1.20</span> <span class="hl" data-part="rows">rows=20</span> width=16) (actual time=0.004..0.007 rows=20 <span class="hl" data-part="loops">loops=1</span>)</div>
+                </div>
+            </div>
+            <div class="info-container">
+                <div class="explanation-box">
+                    <div id="stepInfo">Welcome!</div>
+                    <div id="details">This animation explains how to read a query plan from the inside out. Use the controls to start or step through.</div>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--highlight-node);"></div>
+                        <div><strong>Node:</strong> What is happening in this step? Feed result to parent Node.<br><small><em>The operation being performed at this level (e.g., Hash Join, Sort, Bitmap Heap Scan). Each node processes data and passes it up to its parent.</em></small></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--highlight-relation);"></div>
+                        <div><strong>Relation:</strong> What is it happening on? Table or result of child Node?<br><small><em>The table or intermediate result being operated on (e.g., loan_applications, loan_application_statuses).</em></small></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--highlight-cost);"></div>
+                        <div><strong>Cost:</strong> Relatively how expensive is this step?<br><small><em>Estimated cost (in units of disk I/O and CPU). Lower = cheaper. Used for planning.</em></small></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--highlight-modifier);"></div>
+                        <div><strong>Modifier:</strong> Tweak result before handoff.<br><small><em>Additional conditions or transformations applied (e.g., Hash Cond, Index Cond, Recheck Cond).</em></small></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--highlight-rows);"></div>
+                        <div><strong>Rows:</strong> How many rows will be returned by this Node.<br><small><em>Estimated number of rows output by this step (planning estimate vs actual).</em></small></div>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: var(--highlight-loops);"></div>
+                        <div><strong>Loops:</strong> How many times will this step be executed.<br><small><em>Number of times this operation runs during query execution.</em></small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let animationInterval = null;
+        let currentStep = 0;
+
+        const planLines = document.querySelectorAll('.plan-line');
+        const stepInfo = document.getElementById('stepInfo');
+        const details = document.getElementById('details');
+        const startBtn = document.getElementById('startBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        const steps = [
+            // --- Innermost operation: Seq Scan on loan_application_statuses ---
+            { line: 15, part: 'node', title: 'Step 1: Sequential Scan', text: "Execution starts here. A full scan is performed on the `loan_application_statuses` table because it's small and has no `WHERE` clause." },
+            { line: 15, part: 'relation', title: 'Relation: loan_application_statuses', text: 'The node operates on this specific table.' },
+            { line: 15, part: 'cost', title: 'Cost: 0.00..1.20', text: 'This scan is cheap to start (0.00) but costs 1.20 units to read the whole table.' },
+            { line: 15, part: 'rows', title: 'Rows: 20', text: 'Postgres estimates it will find and return 20 rows.' },
+            { line: 15, part: 'loops', title: 'Loops: 1', text: 'This entire operation runs only one time.' },
+            
+            // --- Next, the result of the scan is hashed ---
+            { line: 13, part: 'node', title: 'Step 2: Hash', text: 'The 20 rows from the scan are fed to a Hash node. It builds a hash table in memory for a fast join later.' },
+            { line: 13, part: 'cost', title: 'Cost: 1.20..1.20', text: 'The cost to start this is the total cost of its child (1.20). There is no additional cost to build the hash table.' },
+            { line: 13, part: 'rows', title: 'Rows: 20', text: 'It processes all 20 rows from its child.' },
+            { line: 13, part: 'loops', title: 'Loops: 1', text: 'This also runs just once.' },
+
+            // --- In parallel, the other side of the join starts ---
+            { line: 11, part: 'node', title: 'Step 3: Bitmap Index Scan (External Entity ID)', text: "In parallel, a different operation begins. It scans an index for `external_entity_id`." },
+            { line: 11, part: 'relation', title: 'Relation: index_loan_applications_on_external_entity_id', text: 'This scan uses the index on the `external_entity_id` column.' },
+            { line: 11, part: 'cost', title: 'Cost: 0.00..4.60', text: 'This is a cheap index scan.' },
+            { line: 11, part: 'rows', title: 'Rows: 1', text: 'It expects to find 1 matching entry.' },
+            { line: 11, part: 'loops', title: 'Loops: 1', text: 'This index scan runs once.' },
+
+            { line: 9, part: 'node', title: 'Step 4: Bitmap Index Scan (Account ID)', text: 'At the same time, it scans another index for the `account_id`.' },
+            { line: 9, part: 'relation', title: 'Relation: index_loan_applications_on_account_id', text: 'This scan uses the index on the `account_id` column.' },
+            { line: 9, part: 'cost', title: 'Cost: 0.00..4.62', text: 'Slightly more expensive than the other index scan.' },
+            { line: 9, part: 'rows', title: 'Rows: 3', text: 'It expects to find 3 matching entries.' },
+            { line: 9, part: 'loops', title: 'Loops: 1', text: 'This index scan also runs once.' },
+
+            // --- Combine the bitmaps ---
+            { line: 8, part: 'node', title: 'Step 5: BitmapOr', text: 'The results (bitmaps of row locations) from the two index scans are combined using an OR operation.' },
+            { line: 8, part: 'cost', title: 'Cost: 9.21..9.21', text: 'The cost is the sum of its children plus a small CPU cost for the OR operation.' },
+            { line: 8, part: 'rows', title: 'Rows: 3', text: 'It expects the combined bitmap to point to 3 rows.' },
+            { line: 8, part: 'loops', title: 'Loops: 1', text: 'This combination happens once.' },
+
+            // --- Fetch the rows from the table ---
+            { line: 6, part: 'node', title: 'Step 6: Bitmap Heap Scan', text: 'This node takes the combined bitmap and fetches the actual rows from the main table.' },
+            { line: 6, part: 'relation', title: 'Relation: loan_applications', text: 'The relation is the `loan_applications` table. It only visits the pages indicated by the bitmap, which is very efficient.' },
+            { line: 7, part: 'modifier', title: 'Modifier: Recheck Cond', text: "Because a bitmap can be lossy (cover more rows than needed), Postgres must re-check the original conditions on every row it fetches from the heap." },
+            { line: 6, part: 'cost', title: 'Cost: 9.21..21.16', text: 'The cost reflects finding the rows in the bitmap and then fetching them from the table.' },
+            { line: 6, part: 'rows', title: 'Rows: 3', text: 'It expects to get 3 rows after the recheck.' },
+            { line: 6, part: 'loops', title: 'Loops: 1', text: 'This heap scan runs once.' },
+
+            // --- Join the two streams ---
+            { line: 4, part: 'node', title: 'Step 7: Hash Join', text: 'The 3 rows from the heap scan are joined with the hash table created in Step 2.' },
+            { line: 5, part: 'modifier', title: 'Modifier: Hash Cond', text: 'The join condition links the two tables by their status ID. For each of the 3 rows, it probes the hash table for a match.' },
+            { line: 4, part: 'cost', title: 'Cost: 10.66..22.65', text: 'The cost is the sum of its children plus the CPU cost of performing the join.' },
+            { line: 4, part: 'rows', title: 'Rows: 3', text: 'The planner expects the join to result in 3 rows.' },
+            { line: 4, part: 'loops', title: 'Loops: 1', text: 'The join operation runs once.' },
+
+            // --- Sort the results ---
+            { line: 1, part: 'node', title: 'Step 8: Sort', text: 'The 3 rows resulting from the join are then sorted in memory.' },
+            { line: 2, part: 'modifier', title: 'Modifier: Sort Key', text: 'The rows are sorted based on these three columns.' },
+            { line: 1, part: 'cost', title: 'Cost: 22.67..22.68', text: 'The cost to start is the full cost of the join, plus the cost of sorting all the rows.' },
+            { line: 1, part: 'rows', title: 'Rows: 3', text: 'Sorting does not change the number of rows.' },
+            { line: 1, part: 'loops', title: 'Loops: 1', text: 'The sort happens once.' },
+
+            // --- Final step: Unique ---
+            { line: 0, part: 'node', title: 'Step 9: Unique', text: 'Finally, the sorted results are scanned and any duplicate rows are discarded to ensure only unique rows remain.' },
+            { line: 0, part: 'cost', title: 'Cost: 22.67..22.70', text: 'A tiny bit more expensive than sorting, to account for the uniqueness check.' },
+            { line: 0, part: 'rows', title: 'Rows: 2', text: 'The planner expects to find 1 duplicate, resulting in 2 final rows.' },
+            { line: 0, part: 'loops', title: 'Loops: 1', text: 'This final step runs once.' },
+            { line: 0, part: 'final', title: 'Execution Complete', text: 'The final 2 unique rows are returned to the client. The query is finished!' }
+        ];
+
+        function startAnimation() {
+            resetAnimation();
+            startBtn.disabled = true;
+            nextBtn.disabled = true;
+
+            animationInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    executeStep(steps[currentStep]);
+                    currentStep++;
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                    nextBtn.disabled = true;
+                }
+            }, 2000);
+        }
+
+        function manualNextStep() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            startBtn.disabled = true;
+
+            if (currentStep < steps.length) {
+                executeStep(steps[currentStep]);
+                currentStep++;
+            }
+            
+            if (currentStep >= steps.length) {
+                nextBtn.disabled = true;
+            }
+        }
+
+        function executeStep(step) {
+            planLines.forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.hl').forEach(h => h.style.backgroundColor = '');
+
+            const lineEl = document.getElementById(`line-${step.line}`);
+            if (lineEl) lineEl.classList.add('active');
+
+            stepInfo.textContent = step.title;
+            details.textContent = step.text;
+
+            if (step.part && step.part !== 'final') {
+                const parts = document.querySelectorAll(`#line-${step.line} [data-part="${step.part}"]`);
+                parts.forEach(part => {
+                    part.style.backgroundColor = `var(--highlight-${step.part})`;
+                });
+            }
+        }
+
+        function resetAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            currentStep = 0;
+            planLines.forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.hl').forEach(h => h.style.backgroundColor = '');
+            stepInfo.textContent = 'Welcome!';
+            details.textContent = 'This animation explains how to read a query plan from the inside out. Use the controls to start or step through.';
+            startBtn.disabled = false;
+            nextBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>

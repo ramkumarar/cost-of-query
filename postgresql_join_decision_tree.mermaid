@@ -1,0 +1,71 @@
+flowchart TD
+    A[Start: Query with JOIN] --> B{Estimate row counts<br/>using statistics<br/>and WHERE clauses}
+    
+    B --> C{Is the join condition<br/>equi-join OR range<br/>on sorted columns?}
+    
+    C -->|Non-equi, unsorted| D[✅ Nested Loop Join<br/>- Only viable option<br/>- Use index if available<br/>- Sequential scan fallback]
+    
+    C -->|Yes| E{After WHERE clause filtering,<br/>are one or both<br/>result sets small?<br/>< few thousand rows}
+    
+    E -->|Yes| F{Is there a suitable index<br/>on inner table's join column?<br/>Consider covering indexes}
+    
+    F -->|Yes, covering index| G[✅ Nested Loop with<br/>Index-Only Scan<br/>- Best for small selective queries<br/>- No heap access needed<br/>- Excellent with LIMIT]
+    
+    F -->|Yes, regular index| H[✅ Nested Loop with<br/>Inner Index Scan<br/>- Good for small outer table<br/>- Fast index lookups<br/>- Works well with restrictions]
+    
+    F -->|No suitable index| I{Is outer table very small<br/>and join highly selective?}
+    
+    I -->|Yes| J[✅ Nested Loop with<br/>Inner Sequential Scan<br/>- Acceptable for very small tables<br/>- Simple implementation<br/>- No setup overhead]
+    
+    I -->|No| K{Is enough memory available<br/>for hash table of smaller relation?}
+    
+    E -->|No - Large tables| K{Is enough memory available<br/>for hash table of smaller relation?}
+    
+    K -->|Yes, fits in memory| L[✅ Hash Join<br/>- Efficient for large equi-joins<br/>- Smaller table always hashed<br/>- Good memory utilization]
+    
+    K -->|Memory limited| M{Would hash join<br/>spill to disk?}
+    
+    M -->|Acceptable spill| N[⚠️ Hash Join with<br/>Disk Spill<br/>- Spills to temp files<br/>- Slower but still viable<br/>- Memory pressure handled]
+    
+    M -->|Too much spill| O{Are relations sorted<br/>OR is sorting cheaper<br/>than other options?}
+    
+    O -->|Already sorted| P[✅ Merge Join<br/>- Excellent for pre-sorted data<br/>- Uses existing index order<br/>- No additional sort cost]
+    
+    O -->|Sort is cheap| Q[✅ Merge Join with Sort<br/>- Cost-effective sorting<br/>- Good for large equi-joins<br/>- Handles range conditions<br/>- Works with ORDER BY]
+    
+    O -->|Sort too expensive| R[⚠️ Nested Loop with<br/>Sequential Scan<br/>- Last resort fallback<br/>- Often slow for large tables<br/>- May be only option]
+    
+    %% Outer Join Branch
+    S{Is this an OUTER JOIN?} --> T{Is the preserved table<br/>small enough for<br/>outer side of nested loop?}
+    
+    T -->|Yes| U1[✅ Nested Loop Join<br/>- Preserved table as outer<br/>- Ensures all preserved rows<br/>- Good for small preserved tables]
+    
+    T -->|No| U2{Choose algorithm with<br/>preserved table on<br/>appropriate side}
+    
+    U2 --> U3[✅ Hash Join<br/>- Preserved table as probe side<br/>- Non-preserved table hashed<br/>- NULL handling in hash lookup]
+    
+    U2 --> U4[✅ Merge Join<br/>- Preserved table as sorted side<br/>- Maintains all preserved rows<br/>- Good with ORDER BY]
+    
+    %% Additional factors
+    U[Key Factors Affecting Choice:<br/>• Query has LIMIT - favors early-stop algorithms<br/>• ORDER BY clause - may favor merge join<br/>• Parallel execution available<br/>• Statistics quality and freshness<br/>• work_mem setting for hash operations<br/>• Random vs sequential I/O patterns]
+    
+    V[Cost-Based Decision Note:<br/>PostgreSQL uses sophisticated<br/>cost models considering:<br/>• CPU costs • I/O costs<br/>• Memory usage • Cardinality estimates<br/>• Index maintenance overhead]
+    
+    %% Connect outer join consideration  
+    C --> S
+    
+    %% Styling for white background
+    classDef optimal fill:#e8f5e8,stroke:#2d5a2d,stroke-width:2px,color:#1a4d1a
+    classDef good fill:#f0f8ff,stroke:#4682b4,stroke-width:2px,color:#2e4a6b
+    classDef warning fill:#fff3cd,stroke:#856404,stroke-width:2px,color:#856404
+    classDef fallback fill:#ffe6e6,stroke:#cc0000,stroke-width:2px,color:#800000
+    classDef decision fill:#f8f9fa,stroke:#495057,stroke-width:2px,color:#212529
+    classDef info fill:#e7f3ff,stroke:#0066cc,stroke-width:1px,color:#004499
+    classDef default fill:#ffffff,stroke:#333333,color:#000000
+    
+    class G,H,L,P,Q,U1,U3,U4 optimal
+    class J good
+    class N warning
+    class D,R fallback
+    class B,C,E,F,I,K,M,O decision
+    class S,T,U,V info

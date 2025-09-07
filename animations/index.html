@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PostgreSQL Internals Animations</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #333;
+        }
+        .container {
+            text-align: center;
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 40px;
+            font-size: 2.8em;
+            font-weight: 300;
+        }
+        .links {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        a {
+            display: block;
+            padding: 20px 40px;
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-size: 1.2em;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        a:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>PostgreSQL Internals Animations</h1>
+        <div class="links">
+            <a href="sequential_scan_animation.html">Sequential Scan</a>
+            <a href="index_scan_animation.html">Index Scan</a>
+            <a href="index_only_scan_animation.html">Index-Only Scan</a>
+            <a href="bitmap_index_scan_animation.html">Bitmap Index Scan</a>
+            <a href="nested_loop_sequential_animation.html" style="background: linear-gradient(45deg, #c33764, #1d2671);">Nested Loop Join (Seq Scan)</a>
+            <a href="nested_loop_index_animation.html" style="background: linear-gradient(45deg, #159957, #155799);">Nested Loop Join (Index Scan)</a>
+            <a href="hash_join_animation.html" style="background: linear-gradient(45deg, #8e2de2, #4a00e0);">Hash Join</a>
+            <a href="merge_join_animation.html" style="background: linear-gradient(45deg, #00b09b, #96c93d);">Merge Join</a>
+            <a href="btree_page_animation.html" style="background: linear-gradient(45deg, #e74c3c, #c0392b);">Detailed: B-Tree Traversal to Heap Fetch</a>
+            <a href="query_plan_anatomy_animation.html" style="background: linear-gradient(45deg, #4b6cb7, #182848);">Anatomy of a Query Plan</a>
+            <a href="query_to_plan_animation.html" style="background: linear-gradient(45deg, #3a6186, #89253e);">Connecting SQL to Query Plan</a>
+        </div>
+    </div>
+</body>
+</html>

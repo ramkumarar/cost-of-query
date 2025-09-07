@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequential Scan Animation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .animation-area {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step-info {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .table-section {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .heap-pages-section {
+            flex: 2;
+            min-width: 500px;
+        }
+
+        .page {
+            border: 3px solid #3498db;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            background: #f0f8ff;
+            transition: all 0.3s ease;
+        }
+        .page.page-scanning {
+            border-color: #f1c40f;
+            box-shadow: 0 0 20px rgba(241, 196, 15, 0.5);
+        }
+        .page-header {
+            font-weight: bold;
+            color: #2980b9;
+            margin-bottom: 10px;
+        }
+        
+        .query-section {
+            flex: 1;
+            min-width: 300px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .table-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .table-row {
+            display: flex;
+            padding: 8px;
+            margin: 4px 0;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .table-header {
+            background: #34495e;
+            color: white;
+            font-weight: bold;
+        }
+
+        .table-cell {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            border-right: 1px solid #ecf0f1;
+        }
+
+        .table-cell:last-child {
+            border-right: none;
+        }
+
+        .scanning {
+            background: #fff3cd !important;
+            border: 2px solid #ffc107;
+            transform: scale(1.02);
+        }
+
+        .matched {
+            background: #d1fae5 !important;
+            border: 2px solid #10b981;
+        }
+
+        .scan-results {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .operation-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .result-rows {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .result-row {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            color: #155724;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .animated {
+            animation: pulse 1s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Sequential Scan Animation</h1>
+        
+        <div class="controls">
+            <button onclick="startAnimation()">Start Animation</button>
+            <button onclick="resetAnimation()">Reset</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="step-info" id="stepInfo">
+                A sequential scan reads all data pages of a table from start to finish.
+            </div>
+
+            <div class="table-section">
+                <div class="heap-pages-section">
+                    <div class="table-title">Employee Table (Heap Pages)</div>
+                    <div class="page" id="page-1">
+                        <div class="page-header">Page 1</div>
+                        <div class="table-row table-header">
+                            <div class="table-cell">Row ID</div><div class="table-cell">Name</div><div class="table-cell">Age</div>
+                        </div>
+                        <div class="table-row" data-row="0">
+                            <div class="table-cell">0</div><div class="table-cell">Alice</div><div class="table-cell">28</div>
+                        </div>
+                        <div class="table-row" data-row="1">
+                            <div class="table-cell">1</div><div class="table-cell">Bob</div><div class="table-cell">32</div>
+                        </div>
+                        <div class="table-row" data-row="2">
+                            <div class="table-cell">2</div><div class="table-cell">Carol</div><div class="table-cell">29</div>
+                        </div>
+                    </div>
+                    <div class="page" id="page-2">
+                        <div class="page-header">Page 2</div>
+                        <div class="table-row table-header">
+                            <div class="table-cell">Row ID</div><div class="table-cell">Name</div><div class="table-cell">Age</div>
+                        </div>
+                        <div class="table-row" data-row="3">
+                            <div class="table-cell">3</div><div class="table-cell">David</div><div class="table-cell">35</div>
+                        </div>
+                        <div class="table-row" data-row="4">
+                            <div class="table-cell">4</div><div class="table-cell">Eve</div><div class="table-cell">26</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="query-section">
+                    <div class="table-title">Query</div>
+                    <div style="background: #fff3cd; border-radius: 5px; padding: 15px; margin-bottom: 15px;">
+                        <strong>SELECT * FROM Employee<br>
+                        WHERE Age > 30</strong>
+                    </div>
+                    <div style="font-size: 14px; color: #666; line-height: 1.6;">
+                        This query requires a sequential scan as there is no index on 'Age'. The database must read every row from every page.
+                    </div>
+                </div>
+            </div>
+
+            <div class="scan-results" id="scanResults" style="display: none;">
+                <div class="operation-title">Scan Results</div>
+                <div class="result-rows" id="resultRows"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let animationInterval = null;
+        const employeeData = [
+            { id: 0, name: 'Alice', age: 28 }, { id: 1, name: 'Bob', age: 32 }, { id: 2, name: 'Carol', age: 29 },
+            { id: 3, name: 'David', age: 35 }, { id: 4, name: 'Eve', age: 26 }
+        ];
+
+        function startAnimation() {
+            resetAnimation();
+            document.querySelector('button[onclick="startAnimation()"]').disabled = true;
+            document.getElementById('scanResults').style.display = 'block';
+
+            const steps = [
+                { info: "Starting scan. Reading Page 1...", action: () => highlightPage(1) },
+                { info: "Scanning Row 0... Age (28) is not > 30.", action: () => scanRow(0) },
+                { info: "Scanning Row 1... Age (32) is > 30. Match found!", action: () => scanRow(1, true) },
+                { info: "Scanning Row 2... Age (29) is not > 30.", action: () => scanRow(2) },
+                { info: "Finished Page 1. Reading Page 2...", action: () => { clearHighlights(); highlightPage(2); } },
+                { info: "Scanning Row 3... Age (35) is > 30. Match found!", action: () => scanRow(3, true) },
+                { info: "Scanning Row 4... Age (26) is not > 30.", action: () => scanRow(4) },
+                { info: "Finished Page 2. All pages have been read.", action: clearHighlights },
+                { info: "Sequential Scan Complete!", action: () => document.querySelector('button[onclick="startAnimation()"]').disabled = false }
+            ];
+
+            let currentStep = 0;
+            animationInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    const step = steps[currentStep];
+                    document.getElementById('stepInfo').textContent = step.info;
+                    step.action();
+                    currentStep++;
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            }, 1500);
+        }
+
+        function resetAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            document.getElementById('stepInfo').textContent = "A sequential scan reads all data pages of a table from start to finish.";
+            document.querySelector('button[onclick="startAnimation()"]').disabled = false;
+            document.getElementById('scanResults').style.display = 'none';
+            document.getElementById('resultRows').innerHTML = '';
+            clearHighlights();
+        }
+
+        function clearHighlights() {
+            document.querySelectorAll('.page-scanning').forEach(p => p.classList.remove('page-scanning'));
+            document.querySelectorAll('.scanning').forEach(r => r.classList.remove('scanning'));
+        }
+
+        function highlightPage(pageNum) {
+            document.getElementById(`page-${pageNum}`).classList.add('page-scanning');
+        }
+
+        function scanRow(rowId, isMatch = false) {
+            document.querySelectorAll('.scanning').forEach(r => r.classList.remove('scanning'));
+            const rowElement = document.querySelector(`[data-row="${rowId}"]`);
+            rowElement.classList.add('scanning');
+            if (isMatch) {
+                setTimeout(() => {
+                    rowElement.classList.add('matched');
+                    addResultRow(employeeData[rowId]);
+                }, 700);
+            }
+        }
+
+        function addResultRow(data) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'result-row animated';
+            resultDiv.textContent = `Row ${data.id}: ${data.name}, Age: ${data.age}`;
+            document.getElementById('resultRows').appendChild(resultDiv);
+        }
+    </script>
+</body>
+</html>

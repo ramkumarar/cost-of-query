@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B-Tree Index and Heap Fetch Animation</title>
+    <style>
+        :root {
+            --page-bg: linear-gradient(135deg, #6a85b6 0%, #bac8e0 100%);
+            --container-bg: white;
+            --area-bg: #f8f9fa;
+            --header-color: #2c3e50;
+            --info-bg: linear-gradient(45deg, #3498db, #2980b9);
+            --node-bg: #fff;
+            --node-border: #95a5a6;
+            --highlight-search: #f1c40f;
+            --highlight-path: #2ecc71;
+            --highlight-final: #e74c3c;
+            --page-color: #3498db;
+            --pointer-color: #f39c12;
+            --data-color: #9b59b6;
+            --arrow-color: #34495e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: var(--page-bg);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: var(--container-bg);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--header-color);
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+        button:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+
+        .animation-area {
+            background: var(--area-bg);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .step-info {
+            background: var(--info-bg);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: 500;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .visualization {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        /* B-Tree Styles */
+        .btree-section, .heap-section {
+            flex: 1;
+            min-width: 600px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: opacity 0.5s ease;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            color: var(--header-color);
+            margin-bottom: 25px;
+        }
+
+        .btree {
+            position: relative;
+            padding: 20px 0;
+        }
+
+        .node-level {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 50px;
+        }
+
+        .node {
+            border: 2px solid var(--node-border);
+            background: var(--node-bg);
+            border-radius: 5px;
+            padding: 5px;
+            display: flex;
+            margin: 0 15px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .node.leaf-node { flex-direction: column; }
+        .node .key {
+            padding: 8px 12px;
+            border-right: 1px solid #ccc;
+        }
+        .node .key:last-child { border-right: none; }
+        .node.leaf-node .key {
+            font-size: 0.9em;
+            padding: 4px 8px;
+            border-right: none;
+            border-bottom: 1px solid #eee;
+        }
+        .node.leaf-node .tid {
+            font-size: 0.7em;
+            color: #666;
+            padding: 2px 8px;
+        }
+
+        .node.highlight-search { background: var(--highlight-search); border-color: #c8a91e; }
+        .node.highlight-path { background: var(--highlight-path); border-color: #25a25a; color: white; }
+        .node.highlight-final { background: var(--highlight-final); border-color: #b83c2f; color: white; }
+
+        /* Heap Page Styles */
+        .page {
+            border: 3px solid var(--page-color);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            position: relative;
+            background: #f0f8ff;
+        }
+        .page.highlight-search { border-color: var(--highlight-final); }
+        .page-header {
+            position: absolute;
+            top: -15px;
+            left: 15px;
+            background: var(--page-color);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .page-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-top: 25px;
+        }
+        .item-pointers, .data-tuples {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .item-pointer, .data-tuple {
+            padding: 8px;
+            border-radius: 5px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+        .item-pointer { background: var(--pointer-color); color: white; }
+        .data-tuple { background: var(--data-color); color: white; }
+        .item-pointer.highlight-search { background: var(--highlight-final); transform: scale(1.1); }
+        .data-tuple.highlight-search { background: var(--highlight-final); transform: scale(1.1); }
+
+        #results { margin-top: 20px; text-align: center; }
+        .result-row {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            border-radius: 5px;
+            padding: 15px;
+            font-weight: bold;
+            color: #155724;
+            font-size: 1.2em;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>B-Tree Index Traversal and Heap Fetch</h1>
+        
+        <div class="controls">
+            <button onclick="startAnimation()">Animate for ID = 10</button>
+            <button onclick="resetAnimation()">Reset</button>
+        </div>
+
+        <div class="animation-area">
+            <div class="step-info" id="stepInfo">
+                Animation demonstrating how PostgreSQL uses a B-Tree index to find a row's physical location (TID) and then fetches it from the heap page.
+            </div>
+
+            <div class="visualization">
+                <div class="btree-section" id="btreeSection">
+                    <div class="section-title">B-Tree Index on User ID</div>
+                    <div class="btree">
+                        <!-- Root Node -->
+                        <div class="node-level">
+                            <div class="node" id="node-root"><div class="key">4</div></div>
+                        </div>
+                        <!-- Non-Leaf Nodes -->
+                        <div class="node-level">
+                            <div class="node" id="node-l1-1"><div class="key">2</div></div>
+                            <div class="node" id="node-l1-2"><div class="key">8</div></div>
+                        </div>
+                        <!-- Leaf Nodes -->
+                        <div class="node-level">
+                            <div class="node leaf-node" id="node-leaf-1"><div><span class="key">1</span><span class="tid">TID(P1,I1)</span></div></div>
+                            <div class="node leaf-node" id="node-leaf-2"><div><span class="key">2</span><span class="tid">TID(P2,I1)</span></div><div><span class="key">3</span><span class="tid">TID(P1,I3)</span></div></div>
+                            <div class="node leaf-node" id="node-leaf-3"><div><span class="key">4</span><span class="tid">TID(P2,I2)</span></div><div><span class="key">6</span><span class="tid">TID(P1,I4)</span></div></div>
+                            <div class="node leaf-node" id="node-leaf-4"><div><span class="key">9</span><span class="tid">TID(P2,I3)</span></div><div><span class="key">10</span><span class="tid">TID(P1,I2)</span></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="heap-section" id="heapSection">
+                    <div class="section-title">Heap Pages (8KB Blocks)</div>
+                    <div class="page" id="page-1">
+                        <div class="page-header">Page 1</div>
+                        <div class="page-content">
+                            <div class="item-pointers">
+                                <div class="item-pointer" id="p1-i1">Ptr 1</div>
+                                <div class="item-pointer" id="p1-i2">Ptr 2</div>
+                                <div class="item-pointer" id="p1-i3">Ptr 3</div>
+                                <div class="item-pointer" id="p1-i4">Ptr 4</div>
+                            </div>
+                            <div class="data-tuples">
+                                <div class="data-tuple" id="p1-d1">ID:1, Name:Alice</div>
+                                <div class="data-tuple" id="p1-d2">ID:10, Name:Grace</div>
+                                <div class="data-tuple" id="p1-d3">ID:3, Name:Carol</div>
+                                <div class="data-tuple" id="p1-d4">ID:6, Name:Eve</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="page" id="page-2">
+                        <div class="page-header">Page 2</div>
+                         <div class="page-content">
+                            <div class="item-pointers">
+                                <div class="item-pointer" id="p2-i1">Ptr 1</div>
+                                <div class="item-pointer" id="p2-i2">Ptr 2</div>
+                                <div class="item-pointer" id="p2-i3">Ptr 3</div>
+                            </div>
+                            <div class="data-tuples">
+                                <div class="data-tuple" id="p2-d1">ID:2, Name:Bob</div>
+                                <div class="data-tuple" id="p2-d2">ID:4, Name:David</div>
+                                <div class="data-tuple" id="p2-d3">ID:9, Name:Frank</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="results" style="display: none;">
+                 <div class="section-title">Query Result</div>
+                 <div class="result-row" id="result-row"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let animationInterval = null;
+
+        function startAnimation() {
+            resetAnimation();
+            document.querySelector('button[onclick="startAnimation()"]').disabled = true;
+            
+            const steps = [
+                { info: "Query: SELECT * FROM users WHERE id = 10. Start search at B-Tree root.", action: () => highlightNode('node-root', 'search') },
+                { info: "10 > 4, so traverse to the right child node.", action: () => { highlightNode('node-root', 'path'); highlightNode('node-l1-2', 'search'); } },
+                { info: "10 > 8, so traverse to the right child (leaf) node.", action: () => { highlightNode('node-l1-2', 'path'); highlightNode('node-leaf-4', 'search'); } },
+                { info: "Scanning leaf node... Found key 10. The physical location is TID(Page 1, Item 2).", action: () => highlightNode('node-leaf-4', 'final') },
+                { info: "The TID tells us to go to Page 1 of the heap.", action: () => { document.getElementById('btreeSection').style.opacity = 0.3; highlightPage('page-1'); } },
+                { info: "Inside Page 1, use the 2nd Item Pointer.", action: () => highlightPointer('p1-i2') },
+                { info: "The Item Pointer points to the actual tuple data on the page.", action: () => highlightData('p1-d2') },
+                { info: "Data fetched from heap. Returning the final result.", action: () => showResult("ID:10, Name:Grace") },
+                { info: "Animation Complete!", action: () => document.querySelector('button[onclick="startAnimation()"]').disabled = false }
+            ];
+
+            let currentStep = 0;
+            animationInterval = setInterval(() => {
+                if (currentStep < steps.length) {
+                    document.getElementById('stepInfo').textContent = steps[currentStep].info;
+                    steps[currentStep].action();
+                    currentStep++;
+                } else {
+                    clearInterval(animationInterval);
+                    animationInterval = null;
+                }
+            }, 2000);
+        }
+
+        function resetAnimation() {
+            if (animationInterval) {
+                clearInterval(animationInterval);
+                animationInterval = null;
+            }
+            document.getElementById('stepInfo').textContent = "Click the button to start the animation.";
+            document.querySelector('button[onclick="startAnimation()"]').disabled = false;
+            
+            document.querySelectorAll('.node, .page, .item-pointer, .data-tuple').forEach(el => {
+                el.classList.remove('highlight-search', 'highlight-path', 'highlight-final');
+            });
+            
+            document.getElementById('btreeSection').style.opacity = 1;
+            document.getElementById('results').style.display = 'none';
+        }
+
+        function highlightNode(id, type) {
+            const el = document.getElementById(id);
+            el.classList.remove('highlight-search', 'highlight-path', 'highlight-final');
+            if (type === 'search') el.classList.add('highlight-search');
+            else if (type === 'path') el.classList.add('highlight-path');
+            else if (type === 'final') el.classList.add('highlight-final');
+        }
+
+        function highlightPage(id) {
+            document.getElementById(id).classList.add('highlight-search');
+        }
+
+        function highlightPointer(id) {
+            document.getElementById(id).classList.add('highlight-search');
+        }
+        
+        function highlightData(id) {
+            document.getElementById(id).classList.add('highlight-search');
+        }
+
+        function showResult(result) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.style.display = 'block';
+            document.getElementById('result-row').textContent = result;
+        }
+    </script>
+</body>
+</html>
